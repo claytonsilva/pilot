@@ -97,6 +97,7 @@ const transactionObj = {
     paid_amount: prop('paid_amount'),
     net_amount: prop('amount'),
     cost_amount: prop('cost'),
+    refund_amount: prop('refunded_amount'),
     installments: prop('installments'),
   },
   antifraud: getAntifraudProp,

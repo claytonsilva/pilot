@@ -2,7 +2,6 @@ import {
   apply,
   always,
   applySpec,
-  dissoc,
   flatten,
   has,
   ifElse,
@@ -71,12 +70,15 @@ const sumInstallmentsAmount = pipe(
   sum
 )
 
-const sumPayableFees = pipe(props(['fee', 'anticipation_fee']), sum)
+const sumAllPayableFees = pipe(props(['fee', 'anticipation_fee']), sum)
+const payablesAllFeesTotalAmount = pipe(
+  map(sumAllPayableFees),
+  sum
+)
 
 const sumInstallmentsCostAmount = pipe(
   prop('installments'),
-  map(sumPayableFees),
-  sum
+  payablesAllFeesTotalAmount
 )
 
 const mapRecipients = map(applySpec({
@@ -111,7 +113,7 @@ const mapRecipients = map(applySpec({
       payment_date: prop('payment_date'),
       original_payment_date: prop('original_payment_date'),
       amount: prop('amount'),
-      net_amount: sumPayableFees,
+      net_amount: sumAllPayableFees,
       costs: {
         mdr: prop('fee'),
         anticipation: prop('anticipation_fee'),
@@ -122,6 +124,17 @@ const mapRecipients = map(applySpec({
 
 const buildRecipients = applySpec({
   recipients: unless(isNil, mapRecipients),
+})
+
+const sumPayables = pipe(
+  pluck('amount'),
+  sum
+)
+
+const buildReceivables = applySpec({
+  receivables: {
+    amount: sumPayables,
+  },
 })
 
 const mapTransactionToResult = applySpec({
@@ -137,14 +150,9 @@ const mapTransactionToResult = applySpec({
         buildOperations
       ),
       pipe(prop('split_rules'), buildRecipients),
+      pipe(prop('payables'), buildReceivables),
     ]),
     mergeAll
-  ),
-  rest: pipe(
-    dissoc('transaction'),
-    dissoc('gatewayOperations'),
-    dissoc('chargebackOperations'),
-    dissoc('split_rules')
   ),
 })
 
