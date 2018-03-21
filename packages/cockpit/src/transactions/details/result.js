@@ -17,6 +17,7 @@ import {
   subtract,
   sum,
   pluck,
+  unless,
 } from 'ramda'
 
 import { transactionObj } from '../shared'
@@ -44,47 +45,49 @@ const sumInstallmentsCostAmount = pipe(
   sum
 )
 
+const mapRecipients = map(applySpec({
+  name: path(['recipient', 'bank_account', 'legal_name']),
+  amount: sumInstallmentsAmount,
+  net_amount: pipe(
+    juxt([
+      sumInstallmentsAmount,
+      sumInstallmentsCostAmount,
+    ]),
+    apply(subtract)
+  ),
+  liabilities: pipe(
+    juxt([
+      ifElse(
+        propEq('charge_processing_fee', true),
+        always('mdr'),
+        always(null)
+      ),
+      ifElse(
+        propEq('liable', true),
+        always('chargeback'),
+        always(null)
+      ),
+    ]),
+    reject(isNil)
+  ),
+  installments: pipe(
+    prop('installments'),
+    map(applySpec({
+      number: prop('installment'),
+      payment_date: prop('payment_date'),
+      original_payment_date: prop('original_payment_date'),
+      amount: prop('amount'),
+      net_amount: sumPayableFees,
+      costs: {
+        mdr: prop('fee'),
+        anticipation: prop('anticipation_fee'),
+      },
+    }))
+  ),
+}))
+
 const buildRecipients = applySpec({
-  recipients: map(applySpec({
-    name: path(['recipient', 'bank_account', 'legal_name']),
-    amount: sumInstallmentsAmount,
-    net_amount: pipe(
-      juxt([
-        sumInstallmentsAmount,
-        sumInstallmentsCostAmount,
-      ]),
-      apply(subtract)
-    ),
-    liabilities: pipe(
-      juxt([
-        ifElse(
-          propEq('charge_processing_fee', true),
-          always('mdr'),
-          always(null)
-        ),
-        ifElse(
-          propEq('liable', true),
-          always('chargeback'),
-          always(null)
-        ),
-      ]),
-      reject(isNil)
-    ),
-    installments: pipe(
-      prop('installments'),
-      map(applySpec({
-        number: prop('installment'),
-        payment_date: prop('payment_date'),
-        original_payment_date: prop('original_payment_date'),
-        amount: prop('amount'),
-        net_amount: sumPayableFees,
-        costs: {
-          mdr: prop('fee'),
-          anticipation: prop('anticipation_fee'),
-        },
-      }))
-    ),
-  })),
+  recipients: unless(isNil, mapRecipients),
 })
 
 const mapTransactionToResult = applySpec({
