@@ -16,6 +16,7 @@ import {
 } from '../../src/containers/Account/SignUp'
 import Unregistered from '../../src/containers/Account/UnregisteredPresentation'
 import Registered from '../../src/containers/Account/RegisteredPresentation'
+import Settings from '../../src/containers/Account/Settings'
 
 const Placeholder = props => (
   <svg viewBox="0 0 26.458 26.458" {...props}>
@@ -131,5 +132,10 @@ storiesOf('Account', module)
         />
       }
       secondaryContent={unregisteredPresentation}
+    />
+  ))
+  .add('Account Settings', () => (
+    <Settings
+      
     />
   ))
