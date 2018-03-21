@@ -22,6 +22,7 @@ import {
 } from 'ramda'
 
 import result from './result'
+import chargebackOperationsMock from './chargebackOperationsMock'
 
 const fetchRecipient = client => splitRule =>
   client.recipients.find({ id: splitRule.recipient_id })
@@ -50,7 +51,8 @@ const groupInstallments = (client, { split_rules, payables }) =>
 const details = client => transactionId =>
   props({
     transaction: client.transactions.find({ id: transactionId }),
-    operations: client.gatewayOperations.find({ transactionId }),
+    gatewayOperations: client.gatewayOperations.find({ transactionId }),
+    chargebackOperations: Promise.resolve(chargebackOperationsMock),
     payables: client.payables.find({ transactionId }),
     chargebacks: client.chargebacks.find({ transaction_id: transactionId }),
   })
